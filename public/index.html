@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Voice Chat Interface</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 50px; border: none; transition: 0.3s; }
+        #startBtn { background-color: #28a745; color: white; }
+        #stopBtn { background-color: #dc3545; color: white; display: none; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h1>Talk to AI</h1>
+    
+    <div>
+        <button id="startBtn" onclick="startRecording()">🎤 Start Talking</button>
+        <button id="stopBtn" onclick="stopRecording()">⏹ Stop</button>
+    </div>
+
+    <p id="status">Ready to connect...</p>
+
+    <script>
+        const socket = io();
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+
+        async function startRecording() {
+            try {
+                // 1. Get Microphone Access
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 2. Initialize Recorder
+                // 'timeslice: 1000' means it sends a chunk of data every 1 second
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        // Stream the chunk to the server immediately
+                        socket.emit('audio-stream', event.data);
+                    }
+                };
+
+                mediaRecorder.start(250); // Send a chunk every 250ms
+
+                // UI Updates
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                status.innerText = "Listening...";
+
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                alert("Could not access microphone.");
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                socket.emit('end-stream'); // Tell server we are done
+            }
+            
+            // UI Updates
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            status.innerText = "Processing...";
+        }
+
+        // Listen for server response
+        socket.on('bot-message', (msg) => {
+            status.innerText = "AI says: " + msg;
+        });
+
+    </script>
+</body>
+</html>

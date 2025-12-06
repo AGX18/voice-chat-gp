@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+*.log
+*.tgz
+*.zip
+*.rar
+*.7z
+*.gz
+*.patch
+*.diff
+.nyc_output/
+coverage/
+.temp/
+dist/
+build/
+tmp/
+
+# Editor/OS Specific
+.idea/
+.project
+.settings/
+Thumbs.db
