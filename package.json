@@ -1,20 +1,23 @@
 {
   "name": "voice-chat-gp",
   "version": "1.0.0",
-  "main": "index.js",
-  "type": "module",
+  "main": "experiment.js",
   "scripts": {
-    "start": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AGX18/voice-chat-gp.git"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AGX18/voice-chat-gp/issues"
+  },
+  "homepage": "https://github.com/AGX18/voice-chat-gp#readme",
   "description": "",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "google-tts-api": "^2.0.2",
-    "socket.io": "^4.8.1"
+    "ws": "^8.18.3"
   }
 }
