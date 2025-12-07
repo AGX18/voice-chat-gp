@@ -18,6 +18,7 @@
   "homepage": "https://github.com/AGX18/voice-chat-gp#readme",
   "description": "",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "ws": "^8.18.3"
   }
 }

@@ -1,11 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Voice Chat</title>
-</head>
-<body>
-    
-</body>
+  </head>
+  <body>
+    Let's chat
+    <p id="status">🟥 Disconnected</p>
+    <button type="button" id="startBtn">🎤 Start Chat</button>
+    <button type="button" id="stopBtn">🛑 Stop Chat</button>
+  </body>
+  <script>
+    // script.js
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    let ws = null;
+    let audioCtx = null;
+
+    function startMicrophone(ws) {
+      const stream = navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 16000, // Try to request 16kHz to match Gemini
+        },
+      });
+
+      stream.then((mediaStream) => {
+        const context = new AudioContext({ sampleRate: 16000 });
+        const source = context.createMediaStreamSource(mediaStream);
+        const processor = context.createScriptProcessor(4096, 1, 1);
+
+        processor.onaudioprocess = (e) => {
+          if (ws.readyState !== WebSocket.OPEN) return;
+
+          const inputData = e.inputBuffer.getChannelData(0);
+
+          // CONVERT: Float32 (Browser) -> Int16 (Gemini)
+          const pcmData = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            // Clamp values between -1 and 1, then scale to 16-bit
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+          }
+
+          if (Math.random() < 0.05) {
+            // Log 5% of packets so we don't flood console
+            console.log(`🎤 Sending mic chunk: ${pcmData.byteLength} bytes`);
+          }
+
+          // Send raw binary to server
+          ws.send(pcmData.buffer);
+        };
+
+        source.connect(processor);
+        processor.connect(context.destination); // Required to keep processor alive
+      });
+    }
+
+    // 1. The Audio Translator (Binary -> Sound)
+    // This is the exact logic you tested in the console
+    function playAudio(binaryData) {
+      const int16Data = new Int16Array(binaryData);
+      const buffer = audioCtx.createBuffer(1, int16Data.length, 24000);
+      const channelData = buffer.getChannelData(0);
+
+      for (let i = 0; i < int16Data.length; i++) {
+        channelData[i] = int16Data[i] / 32768.0;
+      }
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+    }
+
+    // 2. The Connection
+    function connect() {
+      ws = new WebSocket("ws://localhost:8080");
+      ws.binaryType = "arraybuffer"; // Important!
+
+      ws.onopen = () => {
+        statusEl.innerText = " 🟢 Connected! Waiting for audio... ";
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        startMicrophone(ws);
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          playAudio(event.data);
+        }
+      };
+
+      ws.onclose = () => {
+        statusEl.innerText = "🟥 Disconnected";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    }
+
+    // 3. The Trigger
+    startBtn.onclick = () => {
+      // Must resume AudioContext on user click
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 24000,
+      });
+      connect();
+    };
+
+    stopBtn.onclick = () => {
+      if (ws) ws.close();
+    };
+  </script>
 </html>
