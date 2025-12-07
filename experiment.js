@@ -67,7 +67,7 @@ wss.on("connection", (browserSocket) => {
     if (Buffer.isBuffer(data)) {
       // 2. Convert Raw Binary -> Base64
       const base64Audio = data.toString("base64");
-      console.log(base64Audio);
+      //   console.log(base64Audio);
       // 3. Wrap in Gemini's "RealtimeInput" format
       const audioMessage = {
         realtime_input: {

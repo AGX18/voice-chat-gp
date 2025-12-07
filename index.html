@@ -19,6 +19,7 @@
 
     let ws = null;
     let audioCtx = null;
+    let nextStartTime = 0; // Tracks when the next chunk should play
 
     function startMicrophone(ws) {
       const stream = navigator.mediaDevices.getUserMedia({
@@ -63,6 +64,12 @@
     // 1. The Audio Translator (Binary -> Sound)
     // This is the exact logic you tested in the console
     function playAudio(binaryData) {
+      // Ensure we have a valid context (Use 24,000Hz for Gemini's voice)
+      if (!audioCtx)
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 24000,
+        });
+
       const int16Data = new Int16Array(binaryData);
       const buffer = audioCtx.createBuffer(1, int16Data.length, 24000);
       const channelData = buffer.getChannelData(0);
@@ -74,7 +81,18 @@
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
       source.connect(audioCtx.destination);
-      source.start();
+
+      //THE FIX: Schedule playback
+      // If the queue is empty or behind time, reset to "now"
+      if (nextStartTime < audioCtx.currentTime) {
+        nextStartTime = audioCtx.currentTime;
+      }
+
+      // Schedule this chunk to start exactly when the previous one ends
+      source.start(nextStartTime);
+
+      // Advance the timer by the length of this chunk
+      nextStartTime += buffer.duration;
     }
 
     // 2. The Connection
