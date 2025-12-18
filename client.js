@@ -1,7 +1,7 @@
 // 1. Setup Audio Engine (24kHz is standard for Gemini)
 // window.webkitAudioContext is for Safari compatibility
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-  sampleRate: 24000,
+  sampleRate: 16000,
 });
 
 // Connects to local WebSocket server
@@ -13,7 +13,7 @@ ws.binaryType = "arraybuffer";
 
 ws.onopen = () => {
   console.log("Connected! Requesting Noise...");
-  ws.send("HIT_ME");
+  // ws.send("HIT_ME");
 };
 
 // Receives binary audio data as ArrayBuffer
@@ -30,7 +30,7 @@ ws.onmessage = async (event) => {
   const int16View = new Int16Array(rawData);
 
   // Create an empty audio buffer for the browser
-  const audioBuffer = audioCtx.createBuffer(1, int16View.length, 24000);
+  const audioBuffer = audioCtx.createBuffer(1, int16View.length, 16000);
   const channelData = audioBuffer.getChannelData(0);
 
   // Convert every sample from Int to Float

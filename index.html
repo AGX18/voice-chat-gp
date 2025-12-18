@@ -1,77 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Voice Chat</title>
-  </head>
-  <body>
-    Let's chat
-    <p id="status">🟥 Disconnected</p>
-    <button type="button" id="startBtn">🎤 Start Chat</button>
-    <button type="button" id="stopBtn">🛑 Stop Chat</button>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Chat</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin: 0 0 20px 0;
+      color: #333;
+    }
+    #status {
+      padding: 12px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+      text-align: center;
+    }
+    .disconnected { background: #fee; color: #c33; }
+    .connected { background: #efe; color: #363; }
+    .connecting { background: #ffa; color: #883; }
+    button {
+      padding: 12px 24px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #startBtn {
+      background: #4CAF50;
+      color: white;
+    }
+    #startBtn:hover:not(:disabled) {
+      background: #45a049;
+    }
+    #stopBtn {
+      background: #f44336;
+      color: white;
+    }
+    #stopBtn:hover:not(:disabled) {
+      background: #da190b;
+    }
+    #stats {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #666;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎙️ Voice Chat</h1>
+    <div id="status" class="disconnected">🟥 Disconnected</div>
+    
+    <div>
+      <button type="button" id="startBtn">🎤 Start Chat</button>
+      <button type="button" id="stopBtn" disabled>🛑 Stop Chat</button>
+    </div>
+
+    <div id="stats">
+      <div class="stat-row">
+        <span>Sent:</span>
+        <span id="sentBytes">0 KB</span>
+      </div>
+      <div class="stat-row">
+        <span>Received:</span>
+        <span id="receivedBytes">0 KB</span>
+      </div>
+      <div class="stat-row">
+        <span>Audio Queue:</span>
+        <span id="queueTime">0.0s</span>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // script.js
     const statusEl = document.getElementById("status");
     const startBtn = document.getElementById("startBtn");
     const stopBtn = document.getElementById("stopBtn");
+    const sentBytesEl = document.getElementById("sentBytes");
+    const receivedBytesEl = document.getElementById("receivedBytes");
+    const queueTimeEl = document.getElementById("queueTime");
 
     let ws = null;
     let audioCtx = null;
-    let nextStartTime = 0; // Tracks when the next chunk should play
+    let nextStartTime = 0;
+    let mediaStream = null;
+    let audioProcessor = null;
+    let sentBytes = 0;
+    let receivedBytes = 0;
 
-    function startMicrophone(ws) {
-      const stream = navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000, // Try to request 16kHz to match Gemini
-        },
-      });
+    function updateStatus(text, className) {
+      statusEl.innerText = text;
+      statusEl.className = className;
+    }
 
-      stream.then((mediaStream) => {
-        const context = new AudioContext({ sampleRate: 16000 });
+    function updateStats() {
+      sentBytesEl.innerText = `${(sentBytes / 1024).toFixed(1)} KB`;
+      receivedBytesEl.innerText = `${(receivedBytes / 1024).toFixed(1)} KB`;
+      if (audioCtx) {
+        const queuedTime = Math.max(0, nextStartTime - audioCtx.currentTime);
+        queueTimeEl.innerText = `${queuedTime.toFixed(2)}s`;
+      }
+    }
+
+    async function startMicrophone(ws) {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 24000,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+
+        const context = new AudioContext({ sampleRate: 24000 });
         const source = context.createMediaStreamSource(mediaStream);
-        const processor = context.createScriptProcessor(4096, 1, 1);
+        audioProcessor = context.createScriptProcessor(4096, 1, 1);
 
-        processor.onaudioprocess = (e) => {
+        audioProcessor.onaudioprocess = (e) => {
           if (ws.readyState !== WebSocket.OPEN) return;
 
           const inputData = e.inputBuffer.getChannelData(0);
-
-          // CONVERT: Float32 (Browser) -> Int16 (Gemini)
           const pcmData = new Int16Array(inputData.length);
+          
           for (let i = 0; i < inputData.length; i++) {
-            // Clamp values between -1 and 1, then scale to 16-bit
             const s = Math.max(-1, Math.min(1, inputData[i]));
             pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
           }
 
-          if (Math.random() < 0.05) {
-            // Log 5% of packets so we don't flood console
-            console.log(`🎤 Sending mic chunk: ${pcmData.byteLength} bytes`);
-          }
-
-          // Send raw binary to server
           ws.send(pcmData.buffer);
+          sentBytes += pcmData.byteLength;
         };
 
-        source.connect(processor);
-        processor.connect(context.destination); // Required to keep processor alive
-      });
+        source.connect(audioProcessor);
+        audioProcessor.connect(context.destination);
+
+        console.log("🎤 Microphone started");
+      } catch (err) {
+        console.error("Microphone error:", err);
+        updateStatus("❌ Microphone access denied", "disconnected");
+        if (ws) ws.close();
+      }
     }
 
-    // 1. The Audio Translator (Binary -> Sound)
-    // This is the exact logic you tested in the console
+    function stopMicrophone() {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      if (audioProcessor) {
+        audioProcessor.disconnect();
+        audioProcessor = null;
+      }
+      console.log("🎤 Microphone stopped");
+    }
+
     function playAudio(binaryData) {
-      // Ensure we have a valid context (Use 24,000Hz for Gemini's voice)
-      if (!audioCtx)
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-          sampleRate: 24000,
-        });
+      if (!audioCtx) {
+        // Use the browser's native sample rate (usually 48000 Hz)
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
 
       const int16Data = new Int16Array(binaryData);
-      const buffer = audioCtx.createBuffer(1, int16Data.length, 24000);
+      // Create buffer at the actual sample rate the data was recorded at
+      const actualSampleRate = 16000; // Incoming audio is 16kHz
+      const buffer = audioCtx.createBuffer(1, int16Data.length, actualSampleRate);
       const channelData = buffer.getChannelData(0);
 
       for (let i = 0; i < int16Data.length; i++) {
@@ -82,29 +204,34 @@
       source.buffer = buffer;
       source.connect(audioCtx.destination);
 
-      //THE FIX: Schedule playback
-      // If the queue is empty or behind time, reset to "now"
       if (nextStartTime < audioCtx.currentTime) {
         nextStartTime = audioCtx.currentTime;
       }
 
-      // Schedule this chunk to start exactly when the previous one ends
       source.start(nextStartTime);
-
-      // Advance the timer by the length of this chunk
       nextStartTime += buffer.duration;
+
+      receivedBytes += binaryData.byteLength;
     }
 
-    // 2. The Connection
     function connect() {
-      ws = new WebSocket("ws://localhost:8080");
-      ws.binaryType = "arraybuffer"; // Important!
+      updateStatus("🟡 Connecting...", "connecting");
+      
+      // Use secure WebSocket if page is HTTPS
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//localhost:8080`;
+      
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
-        statusEl.innerText = " 🟢 Connected! Waiting for audio... ";
+        updateStatus("🟢 Connected! Speak now...", "connected");
         startBtn.disabled = true;
         stopBtn.disabled = false;
         startMicrophone(ws);
+        
+        // Update stats every 100ms
+        statsInterval = setInterval(updateStats, 100);
       };
 
       ws.onmessage = (event) => {
@@ -113,24 +240,45 @@
         }
       };
 
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        updateStatus("❌ Connection error", "disconnected");
+      };
+
       ws.onclose = () => {
-        statusEl.innerText = "🟥 Disconnected";
+        updateStatus("🟥 Disconnected", "disconnected");
         startBtn.disabled = false;
         stopBtn.disabled = true;
+        stopMicrophone();
+        if (statsInterval) {
+          clearInterval(statsInterval);
+          statsInterval = null;
+        }
       };
     }
 
-    // 3. The Trigger
+    let statsInterval = null;
+
     startBtn.onclick = () => {
-      // Must resume AudioContext on user click
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: 24000,
-      });
+      // Don't pre-create audioCtx - let playAudio create it with correct settings
+      
+      // Reset stats
+      sentBytes = 0;
+      receivedBytes = 0;
+      nextStartTime = 0;
+      
       connect();
     };
 
     stopBtn.onclick = () => {
       if (ws) ws.close();
     };
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      stopMicrophone();
+      if (ws) ws.close();
+    });
   </script>
+</body>
 </html>
