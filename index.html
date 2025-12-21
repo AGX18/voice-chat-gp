@@ -192,7 +192,7 @@
 
       const int16Data = new Int16Array(binaryData);
       // Create buffer at the actual sample rate the data was recorded at
-      const actualSampleRate = 16000; // Incoming audio is 16kHz
+      const actualSampleRate = 24000; // Incoming audio is 24kHz
       const buffer = audioCtx.createBuffer(1, int16Data.length, actualSampleRate);
       const channelData = buffer.getChannelData(0);
 
