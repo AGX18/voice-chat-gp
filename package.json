@@ -1,25 +1,27 @@
 {
-  "name": "voice-chat-gp",
+  "name": "voice-chat-proxy",
   "version": "1.0.0",
-  "main": "experiment.js",
+  "description": "WebSocket proxy server for real-time voice chat with AI",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/AGX18/voice-chat-gp.git"
-  },
-  "keywords": [],
+  "keywords": [
+    "websocket",
+    "voice",
+    "chat",
+    "proxy",
+    "ai"
+  ],
   "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/AGX18/voice-chat-gp/issues"
-  },
-  "homepage": "https://github.com/AGX18/voice-chat-gp#readme",
-  "description": "",
+  "license": "MIT",
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "ws": "^8.18.3"
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

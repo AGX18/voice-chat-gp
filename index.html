@@ -3,100 +3,316 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voice Chat</title>
+  <title>Voice Chat - AI Assistant</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 20px;
-      background: #f5f5f5;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
     .container {
       background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      animation: slideIn 0.5s ease-out;
     }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     h1 {
-      margin: 0 0 20px 0;
+      text-align: center;
       color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
     }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+
     #status {
-      padding: 12px;
-      border-radius: 6px;
-      margin: 15px 0;
-      font-weight: 500;
+      padding: 16px;
+      border-radius: 12px;
+      margin: 20px 0;
+      font-weight: 600;
+      text-align: center;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .status-icon {
+      font-size: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .disconnected { 
+      background: #fee; 
+      color: #c33;
+      border: 2px solid #fcc;
+    }
+
+    .connected { 
+      background: #e8f5e9; 
+      color: #2e7d32;
+      border: 2px solid #a5d6a7;
+    }
+
+    .connecting { 
+      background: #fff3e0; 
+      color: #e65100;
+      border: 2px solid #ffcc80;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    button {
+      flex: 1;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
+    }
+
+    #startBtn:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(67, 233, 123, 0.4);
+      transform: translateY(-2px);
+    }
+
+    #stopBtn {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(250, 112, 154, 0.3);
+    }
+
+    #stopBtn:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(250, 112, 154, 0.4);
+      transform: translateY(-2px);
+    }
+
+    #stats {
+      margin-top: 25px;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .stats-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
       text-align: center;
     }
-    .disconnected { background: #fee; color: #c33; }
-    .connected { background: #efe; color: #363; }
-    .connecting { background: #ffa; color: #883; }
-    button {
-      padding: 12px 24px;
-      margin: 5px;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    #startBtn {
-      background: #4CAF50;
-      color: white;
-    }
-    #startBtn:hover:not(:disabled) {
-      background: #45a049;
-    }
-    #stopBtn {
-      background: #f44336;
-      color: white;
-    }
-    #stopBtn:hover:not(:disabled) {
-      background: #da190b;
-    }
-    #stats {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f9f9f9;
-      border-radius: 6px;
-      font-size: 14px;
-      color: #666;
-    }
+
     .stat-row {
       display: flex;
       justify-content: space-between;
-      margin: 5px 0;
+      margin: 8px 0;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #555;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      color: #333;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .error-message {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 13px;
+      display: none;
+      border-left: 4px solid #c62828;
+    }
+
+    .error-message.show {
+      display: block;
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .audio-visualizer {
+      height: 60px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 10px;
+      display: none;
+    }
+
+    .audio-visualizer.active {
+      display: flex;
+    }
+
+    .bar {
+      width: 4px;
+      height: 20px;
+      background: linear-gradient(to top, #667eea, #764ba2);
+      border-radius: 2px;
+      animation: wave 1s ease-in-out infinite;
+    }
+
+    .bar:nth-child(2) { animation-delay: 0.1s; }
+    .bar:nth-child(3) { animation-delay: 0.2s; }
+    .bar:nth-child(4) { animation-delay: 0.3s; }
+    .bar:nth-child(5) { animation-delay: 0.4s; }
+    .bar:nth-child(6) { animation-delay: 0.3s; }
+    .bar:nth-child(7) { animation-delay: 0.2s; }
+    .bar:nth-child(8) { animation-delay: 0.1s; }
+
+    @keyframes wave {
+      0%, 100% { height: 20px; }
+      50% { height: 40px; }
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #999;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🎙️ Voice Chat</h1>
-    <div id="status" class="disconnected">🟥 Disconnected</div>
+    <p class="subtitle">AI-Powered Voice Assistant</p>
     
-    <div>
-      <button type="button" id="startBtn">🎤 Start Chat</button>
-      <button type="button" id="stopBtn" disabled>🛑 Stop Chat</button>
+    <div id="status" class="disconnected">
+      <span class="status-icon">🔴</span>
+      <span>Disconnected</span>
+    </div>
+
+    <div class="audio-visualizer" id="visualizer">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+
+    <div class="error-message" id="errorMsg"></div>
+    
+    <div class="button-group">
+      <button type="button" id="startBtn">
+        <span>🎤</span>
+        <span>Start Chat</span>
+      </button>
+      <button type="button" id="stopBtn" disabled>
+        <span>🛑</span>
+        <span>Stop Chat</span>
+      </button>
     </div>
 
     <div id="stats">
+      <div class="stats-title">📊 Session Statistics</div>
       <div class="stat-row">
-        <span>Sent:</span>
-        <span id="sentBytes">0 KB</span>
+        <span class="stat-label">📤 Data Sent:</span>
+        <span class="stat-value" id="sentBytes">0.0 KB</span>
       </div>
       <div class="stat-row">
-        <span>Received:</span>
-        <span id="receivedBytes">0 KB</span>
+        <span class="stat-label">📥 Data Received:</span>
+        <span class="stat-value" id="receivedBytes">0.0 KB</span>
       </div>
       <div class="stat-row">
-        <span>Audio Queue:</span>
-        <span id="queueTime">0.0s</span>
+        <span class="stat-label">🎵 Audio Queue:</span>
+        <span class="stat-value" id="queueTime">0.00s</span>
       </div>
+      <div class="stat-row">
+        <span class="stat-label">⏱️ Duration:</span>
+        <span class="stat-value" id="duration">00:00</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      Press Start to begin voice conversation
     </div>
   </div>
 
@@ -107,6 +323,9 @@
     const sentBytesEl = document.getElementById("sentBytes");
     const receivedBytesEl = document.getElementById("receivedBytes");
     const queueTimeEl = document.getElementById("queueTime");
+    const durationEl = document.getElementById("duration");
+    const errorMsgEl = document.getElementById("errorMsg");
+    const visualizerEl = document.getElementById("visualizer");
 
     let ws = null;
     let audioCtx = null;
@@ -115,18 +334,37 @@
     let audioProcessor = null;
     let sentBytes = 0;
     let receivedBytes = 0;
+    let statsInterval = null;
+    let durationInterval = null;
+    let startTime = null;
 
-    function updateStatus(text, className) {
-      statusEl.innerText = text;
+    function updateStatus(text, icon, className) {
+      statusEl.innerHTML = `<span class="status-icon">${icon}</span><span>${text}</span>`;
       statusEl.className = className;
     }
 
+    function showError(message) {
+      errorMsgEl.textContent = message;
+      errorMsgEl.classList.add('show');
+      setTimeout(() => {
+        errorMsgEl.classList.remove('show');
+      }, 5000);
+    }
+
     function updateStats() {
-      sentBytesEl.innerText = `${(sentBytes / 1024).toFixed(1)} KB`;
-      receivedBytesEl.innerText = `${(receivedBytes / 1024).toFixed(1)} KB`;
+      sentBytesEl.textContent = `${(sentBytes / 1024).toFixed(1)} KB`;
+      receivedBytesEl.textContent = `${(receivedBytes / 1024).toFixed(1)} KB`;
+      
       if (audioCtx) {
         const queuedTime = Math.max(0, nextStartTime - audioCtx.currentTime);
-        queueTimeEl.innerText = `${queuedTime.toFixed(2)}s`;
+        queueTimeEl.textContent = `${queuedTime.toFixed(2)}s`;
+      }
+
+      if (startTime) {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        durationEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       }
     }
 
@@ -147,7 +385,7 @@
         audioProcessor = context.createScriptProcessor(4096, 1, 1);
 
         audioProcessor.onaudioprocess = (e) => {
-          if (ws.readyState !== WebSocket.OPEN) return;
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
           const inputData = e.inputBuffer.getChannelData(0);
           const pcmData = new Int16Array(inputData.length);
@@ -164,10 +402,12 @@
         source.connect(audioProcessor);
         audioProcessor.connect(context.destination);
 
+        visualizerEl.classList.add('active');
         console.log("🎤 Microphone started");
       } catch (err) {
         console.error("Microphone error:", err);
-        updateStatus("❌ Microphone access denied", "disconnected");
+        showError("❌ Microphone access denied. Please allow microphone permissions.");
+        updateStatus("Microphone Error", "❌", "disconnected");
         if (ws) ws.close();
       }
     }
@@ -181,18 +421,17 @@
         audioProcessor.disconnect();
         audioProcessor = null;
       }
+      visualizerEl.classList.remove('active');
       console.log("🎤 Microphone stopped");
     }
 
     function playAudio(binaryData) {
       if (!audioCtx) {
-        // Use the browser's native sample rate (usually 48000 Hz)
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
 
       const int16Data = new Int16Array(binaryData);
-      // Create buffer at the actual sample rate the data was recorded at
-      const actualSampleRate = 24000; // Incoming audio is 24kHz
+      const actualSampleRate = 24000;
       const buffer = audioCtx.createBuffer(1, int16Data.length, actualSampleRate);
       const channelData = buffer.getChannelData(0);
 
@@ -215,9 +454,8 @@
     }
 
     function connect() {
-      updateStatus("🟡 Connecting...", "connecting");
+      updateStatus("Connecting...", "🟡", "connecting");
       
-      // Use secure WebSocket if page is HTTPS
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//localhost:8080`;
       
@@ -225,13 +463,14 @@
       ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
-        updateStatus("🟢 Connected! Speak now...", "connected");
+        updateStatus("Connected - Speak now!", "🟢", "connected");
         startBtn.disabled = true;
         stopBtn.disabled = false;
+        startTime = Date.now();
         startMicrophone(ws);
         
-        // Update stats every 100ms
         statsInterval = setInterval(updateStats, 100);
+        durationInterval = setInterval(updateStats, 1000);
       };
 
       ws.onmessage = (event) => {
@@ -242,31 +481,32 @@
 
       ws.onerror = (error) => {
         console.error("WebSocket error:", error);
-        updateStatus("❌ Connection error", "disconnected");
+        showError("Connection error. Is the proxy server running on port 8080?");
+        updateStatus("Connection Error", "❌", "disconnected");
       };
 
       ws.onclose = () => {
-        updateStatus("🟥 Disconnected", "disconnected");
+        updateStatus("Disconnected", "🔴", "disconnected");
         startBtn.disabled = false;
         stopBtn.disabled = true;
         stopMicrophone();
+        
         if (statsInterval) {
           clearInterval(statsInterval);
           statsInterval = null;
         }
+        if (durationInterval) {
+          clearInterval(durationInterval);
+          durationInterval = null;
+        }
+        startTime = null;
       };
     }
 
-    let statsInterval = null;
-
     startBtn.onclick = () => {
-      // Don't pre-create audioCtx - let playAudio create it with correct settings
-      
-      // Reset stats
       sentBytes = 0;
       receivedBytes = 0;
       nextStartTime = 0;
-      
       connect();
     };
 
@@ -274,7 +514,6 @@
       if (ws) ws.close();
     };
 
-    // Clean up on page unload
     window.addEventListener('beforeunload', () => {
       stopMicrophone();
       if (ws) ws.close();
