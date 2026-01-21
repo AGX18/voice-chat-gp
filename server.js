@@ -6,7 +6,7 @@ dotenv.config();
 
 // Configuration
 const BROWSER_PORT = 8080;
-const PYTHON_SERVICE_URL = process.env.PYTHON_WS_URL || "wss://wintriest-brandee-homoiothermic.ngrok-free.dev/ws/audio";
+const PYTHON_SERVICE_URL = process.env.PYTHON_WS_URL || "ws://192.168.1.5:5000/ws/audio";
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const CONNECTION_TIMEOUT = 15000; // 15 seconds (increased for ngrok)
 
@@ -101,11 +101,17 @@ wss.on("connection", (browserSocket, req) => {
         }, HEARTBEAT_INTERVAL);
       });
 
-      // Receive audio from Python → Forward to Browser
-      pythonSocket.on("message", (data) => {
+      // Receive messages from Python → Forward to Browser
+      pythonSocket.on("message", (data, isBinary) => {
         if (browserSocket.readyState === WebSocket.OPEN) {
-          browserSocket.send(data);
+          // Forward with the same type (binary or text)
+          browserSocket.send(data, { binary: isBinary });
           bytesFromPython += data.byteLength || data.length;
+          
+          // Log message type for debugging
+          if (!isBinary && data.length < 200) {
+            console.log(`📨 [${connectionId}] Text message from Python: ${data.toString()}`);
+          }
         }
       });
 

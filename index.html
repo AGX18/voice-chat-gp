@@ -98,6 +98,18 @@
       border: 2px solid #ffcc80;
     }
 
+    .processing {
+      background: #fff9c4;
+      color: #f57f17;
+      border: 2px solid #fff59d;
+    }
+
+    .bot-speaking {
+      background: #e1f5fe;
+      color: #01579b;
+      border: 2px solid #81d4fa;
+    }
+
     .button-group {
       display: flex;
       gap: 10px;
@@ -309,6 +321,10 @@
         <span class="stat-label">⏱️ Duration:</span>
         <span class="stat-value" id="duration">00:00</span>
       </div>
+      <div class="stat-row">
+        <span class="stat-label">🎙️ Mic Status:</span>
+        <span class="stat-value" id="micStatus">Stopped</span>
+      </div>
     </div>
 
     <div class="footer">
@@ -324,6 +340,7 @@
     const receivedBytesEl = document.getElementById("receivedBytes");
     const queueTimeEl = document.getElementById("queueTime");
     const durationEl = document.getElementById("duration");
+    const micStatusEl = document.getElementById("micStatus");
     const errorMsgEl = document.getElementById("errorMsg");
     const visualizerEl = document.getElementById("visualizer");
 
@@ -332,11 +349,13 @@
     let nextStartTime = 0;
     let mediaStream = null;
     let audioProcessor = null;
+    let audioContext = null;
     let sentBytes = 0;
     let receivedBytes = 0;
     let statsInterval = null;
     let durationInterval = null;
     let startTime = null;
+    let isRecording = false;
 
     function updateStatus(text, icon, className) {
       statusEl.innerHTML = `<span class="status-icon">${icon}</span><span>${text}</span>`;
@@ -354,6 +373,7 @@
     function updateStats() {
       sentBytesEl.textContent = `${(sentBytes / 1024).toFixed(1)} KB`;
       receivedBytesEl.textContent = `${(receivedBytes / 1024).toFixed(1)} KB`;
+      micStatusEl.textContent = isRecording ? "Recording 🔴" : "Paused ⏸️";
       
       if (audioCtx) {
         const queuedTime = Math.max(0, nextStartTime - audioCtx.currentTime);
@@ -368,6 +388,20 @@
       }
     }
 
+    function stopRecording() {
+      console.log("🛑 stopRecording() called - isRecording was:", isRecording);
+      isRecording = false;
+      visualizerEl.classList.remove('active');
+      console.log("🎤 Recording STOPPED - isRecording is now:", isRecording);
+    }
+
+    function resumeRecording() {
+      console.log("▶️ resumeRecording() called - isRecording was:", isRecording);
+      isRecording = true;
+      visualizerEl.classList.add('active');
+      console.log("🎤 Recording RESUMED - isRecording is now:", isRecording);
+    }
+
     async function startMicrophone(ws) {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -380,11 +414,23 @@
           },
         });
 
-        const context = new AudioContext({ sampleRate: 24000 });
-        const source = context.createMediaStreamSource(mediaStream);
-        audioProcessor = context.createScriptProcessor(4096, 1, 1);
+        audioContext = new AudioContext({ sampleRate: 24000 });
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
+        let blockCount = 0;
         audioProcessor.onaudioprocess = (e) => {
+          // 🔧 CRITICAL: Check if recording is enabled before sending
+          if (!isRecording) {
+            if (blockCount % 10 === 0) { // Log every 10th blocked chunk to avoid spam
+              console.log(`⏸️ Audio blocked - not recording (blocked ${blockCount} chunks)`);
+            }
+            blockCount++;
+            return; // Don't send audio when paused
+          }
+          
+          blockCount = 0; // Reset counter when recording
+          
           if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
           const inputData = e.inputBuffer.getChannelData(0);
@@ -400,7 +446,8 @@
         };
 
         source.connect(audioProcessor);
-        audioProcessor.connect(context.destination);
+        audioProcessor.connect(audioContext.destination);
+        isRecording = true;
 
         visualizerEl.classList.add('active');
         console.log("🎤 Microphone started");
@@ -421,6 +468,11 @@
         audioProcessor.disconnect();
         audioProcessor = null;
       }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      isRecording = false;
       visualizerEl.classList.remove('active');
       console.log("🎤 Microphone stopped");
     }
@@ -474,8 +526,23 @@
       };
 
       ws.onmessage = (event) => {
+        // Handle binary audio data
         if (event.data instanceof ArrayBuffer) {
+          console.log(`🔊 Received audio chunk: ${event.data.byteLength} bytes`);
           playAudio(event.data);
+        } 
+        // Handle JSON status messages
+        else if (typeof event.data === 'string') {
+          console.log(`📨 Received text message: ${event.data}`);
+          try {
+            const msg = JSON.parse(event.data);
+            console.log(`📬 Parsed message:`, msg);
+            if (msg.type === 'status') {
+              handleStatusUpdate(msg.status);
+            }
+          } catch (e) {
+            console.error("Failed to parse message:", e);
+          }
         }
       };
 
@@ -501,6 +568,30 @@
         }
         startTime = null;
       };
+    }
+
+    function handleStatusUpdate(status) {
+      console.log("📬 Status update received:", status);
+      
+      switch(status) {
+        case 'ready':
+          console.log("✅ Bot ready - enabling microphone");
+          updateStatus("Ready - Speak now!", "🟢", "connected");
+          resumeRecording();
+          break;
+          
+        case 'processing':
+          console.log("⚙️ Processing - disabling microphone");
+          updateStatus("Processing your message...", "⚙️", "processing");
+          stopRecording();
+          break;
+          
+        case 'bot_speaking':
+          console.log("🔊 Bot speaking - disabling microphone");
+          updateStatus("Bot is speaking...", "🔊", "bot-speaking");
+          stopRecording();
+          break;
+      }
     }
 
     startBtn.onclick = () => {
