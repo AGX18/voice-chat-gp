@@ -166,6 +166,7 @@ wss.on("connection", (browserSocket, req) => {
   browserSocket.on("close", (code, reason) => {
     console.log(`🔻 [${connectionId}] Browser disconnected (${code}): ${reason || 'No reason'}`);
     cleanup("Browser disconnected");
+    sendCallSummary();
   });
 
   // Browser error
