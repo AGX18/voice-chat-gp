@@ -201,3 +201,34 @@ process.on("SIGTERM", () => {
     process.exit(0);
   });
 });
+
+async function sendCallSummary() {
+  const url = 'http://localhost:3000/api/ai/call-result';
+  /**
+   * const { contactId, campaignId, outcome, ai_notes, transcript } = req.body;
+   */
+  const data = {
+    contactId: "12345",
+    campaignId: "67890",
+    outcome: "interested",
+    ai_notes: "The customer is interested in a villa for their family.",
+    transcript: "",
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data), // Body must be a string
+    });
+
+    const result = await response.json();
+    console.log('Success:', result);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+createPost();
